@@ -78,11 +78,15 @@ python manage.py migrate
 
 ### 5. Configure Environment Variables
 
-Create a `.env` file in the root directory and add your GitHub token:
+Rename the a  `.env.example` to `.env` file in the root directory and add your GitHub token:
 
 ```env
-GITHUB_TOKEN=github_pat_your_fine_grained_token_here
+# GitHub Models Configuration
+GITHUB_TOKEN=github_pat_your_token_here
 GITHUB_ENDPOINT=https://models.inference.ai.azure.com
+
+# VirusTotal (Optional for specific tools)
+VIRUSTOTAL_API_KEY=your_key_here
 
 ```
 
