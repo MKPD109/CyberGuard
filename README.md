@@ -1,5 +1,3 @@
----
-
 # 🛡️ CyberGuard - AI-Powered Security Assistant
 
 A full-stack cybersecurity web application designed to protect elderly and vulnerable users from digital scams. It uses **GitHub Models (GPT-4o)**, **MCP (Model Context Protocol)**, and a **Persistent Database** to provide contextual, image-aware security analysis in a user-friendly, ChatGPT-style interface.
@@ -7,32 +5,25 @@ A full-stack cybersecurity web application designed to protect elderly and vulne
 ## ✨ Key Features
 
 ### 👁️ Vision & Image Analysis
-
-* **Screenshot Scanning:** Users can upload images of suspicious emails, text messages, or websites.
-* **Instant Previews:** High-fidelity image thumbnails appear before sending, just like modern chat apps.
-* **Inline Rendering:** Uploaded images are embedded directly into the chat history for a clear visual audit trail.
-* **Token Optimization:** A smart backend filter strips massive image data from historical messages to protect API limits while maintaining context.
+- **Screenshot Scanning:** Users can upload images of suspicious emails, text messages, or websites.
+- **Instant Previews:** High-fidelity image thumbnails appear before sending, just like modern chat apps.
+- **Inline Rendering:** Uploaded images are embedded directly into the chat history for a clear visual audit trail.
+- **Token Optimization:** A smart backend filter strips massive image data from historical messages to protect API limits while maintaining context.
 
 ### 🧠 Persistent Memory & State
-
-* **Database Integration:** Fully stateful architecture using a relational database to store sessions and messages.
-* **Multi-Chat Management:** Users can maintain, switch between, and permanently delete different conversation tabs via a dedicated sidebar.
-* **Contextual Awareness:** The AI remembers recent messages within a session to answer follow-up questions accurately.
+- **Database Integration:** Fully stateful architecture using a relational database to store sessions and messages.
+- **Multi-Chat Management:** Users can maintain, switch between, and permanently delete different conversation tabs via a dedicated sidebar.
+- **Contextual Awareness:** The AI remembers recent messages within a session to answer follow-up questions accurately.
 
 ### 🛠️ Advanced Security Tools (MCP)
-
 The application uses a standalone Model Context Protocol (MCP) server to give the AI agent real-time security scanning capabilities without exposing the core logic:
-
-* **DNS & Email Verification:** Automatically scans MX, SPF, and DMARC records to determine if an email sender is spoofed or fraudulent.
-* **Repository Scanner:** Analyzes source code repositories for malicious patterns, new account warnings, and overall trust scores.
+- **DNS & Email Verification:** Automatically scans MX, SPF, and DMARC records to determine if an email sender is spoofed or fraudulent.
+- **Repository Scanner:** Analyzes source code repositories for malicious patterns, new account warnings, and overall trust scores.
 
 ### 🎨 Modern UI/UX
-
-* **ChatGPT-Style Layout:** A beautiful, full-screen responsive interface with a dark sidebar and light chat window.
-* **Rich Text Formatting:** Integrates Markdown parsing to display bold text, bullet points, and numbered lists for highly readable security advice.
-* **Elderly-Friendly:** Designed with large text, clear loading indicators, and simple language instructions.
-
----
+- **ChatGPT-Style Layout:** A beautiful, full-screen responsive interface with a dark sidebar and light chat window.
+- **Rich Text Formatting:** Integrates Markdown parsing to display bold text, bullet points, and numbered lists for highly readable security advice.
+- **Elderly-Friendly:** Designed with large text, clear loading indicators, and simple language instructions.
 
 ## 🏗️ Architecture
 
@@ -41,19 +32,14 @@ The application uses a standalone Model Context Protocol (MCP) server to give th
 3. **MCP Client & Agent (`llm_agent.py`):** Orchestrates the OpenAI SDK, routing prompts and images to GitHub Models and triggering MCP tools when necessary.
 4. **SQLite Database:** Provides zero-config, persistent storage for chat histories.
 
----
-
 ## 🚀 Installation & Setup
 
 ### 1. Prerequisites
-
-* **Python** installed on your system.
-* A **GitHub Fine-Grained Personal Access Token** (Requires `model:read` and `model:write` permissions).
+- **Python** installed on your system.
+- A **GitHub Fine-Grained Personal Access Token** (Requires `model:read` and `model:write` permissions).
 
 ### 2. Environment Setup
-
 Clone the repository and set up a virtual environment:
-
 ```bash
 # Create and activate a virtual environment
 python -m venv venv
@@ -62,6 +48,7 @@ python -m venv venv
 venv\Scripts\activate
 # Mac/Linux Activation:
 source venv/bin/activate
+
 
 ```
 
