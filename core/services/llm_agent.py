@@ -2,24 +2,19 @@ import os
 import json
 import sys
 from mcp.client.stdio import stdio_client, StdioServerParameters
-from openai import AsyncOpenAI
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from openai import AsyncOpenAI, RateLimitError
+from mcp import ClientSession
 from dotenv import load_dotenv
 
-# 1. Calculate the absolute path to the root of your project
-# (This goes up a few folders from llm_agent.py to find the main directory)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 2. Point exactly to your mcp_server.py file
-# IMPORTANT: If your mcp_server.py is inside core/services/, change "mcp_server.py" below to "core/services/mcp_server.py"
+# 1. Calculate absolute path to mcp_server.py
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SERVER_PATH = os.path.join(BASE_DIR, "mcp_server.py")
 
-# 3. Use sys.executable and the absolute SERVER_PATH
+# 2. Define the correct MCP params exactly ONCE
 server_params = StdioServerParameters(
     command=sys.executable,
     args=[SERVER_PATH], 
-    # Optional but highly recommended: pass your environment variables down so the server has them
     env=os.environ.copy() 
 )
 
@@ -38,18 +33,16 @@ async def run_analysis(user_input: str, history: list = None, image_b64: str = N
     if not api_key:
         return "Error: GITHUB_TOKEN not found in environment variables."
 
-    # 1. Prepare the messages list
+    # Prepare messages
     messages = [
         {"role": "system", "content": "You are CyberGuard, a helpful assistant for the elderly. Speak simply. If the user asks about a previous link or provides an image, use the context provided to help them."}
     ]
     messages.extend(history[-6:]) 
 
-    # 2. Format the CURRENT user message to handle both Text and Images
+    # Handle Text and Images
     content_payload = []
-    
     if user_input:
         content_payload.append({"type": "text", "text": user_input})
-        
     if image_b64:
         content_payload.append({
             "type": "image_url",
@@ -58,21 +51,16 @@ async def run_analysis(user_input: str, history: list = None, image_b64: str = N
 
     messages.append({"role": "user", "content": content_payload})
 
-    # MCP server parameters
-    server_params = StdioServerParameters(
-        command=sys.executable,
-        args=["mcp_server.py"],
-        env=None
-    )
+    # === DUPLICATE SERVER_PARAMS HAS BEEN DELETED FROM HERE ===
 
     try:
-        # FIX: We now use AsyncOpenAI as an "async with" context manager!
-        # This guarantees it closes its network connections safely before returning.
+        # Use AsyncOpenAI as an "async with" context manager
         async with AsyncOpenAI(
             base_url="https://models.inference.ai.azure.com",
             api_key=api_key,
         ) as client:
             
+            # This now uses the correct server_params from the top of the file!
             async with stdio_client(server_params) as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
@@ -111,7 +99,6 @@ async def run_analysis(user_input: str, history: list = None, image_b64: str = N
                                 json.loads(tool_call.function.arguments)
                             )
                             
-                            # Extract the text from MCP result
                             result_text = "".join([c.text for c in result.content if hasattr(c, "text")])
 
                             messages.append({
@@ -121,4 +108,22 @@ async def run_analysis(user_input: str, history: list = None, image_b64: str = N
                                 "content": result_text
                             })
     except Exception as e:
+        import traceback
+        traceback.print_exc() # Keep this so you can still see errors in the terminal
+        
+        # We use repr(e) to look inside the "ExceptionGroup" bubble
+        error_details = repr(e)
+        
+        # If the Rate Limit error is hiding inside the bubble, show our friendly UI!
+        if "RateLimitError" in error_details or "429" in error_details:
+            return (
+                "🛡️ **System Alert: Daily Limit Reached**\n\n"
+                "I have reached my maximum number of free security scans for today. "
+                "To keep this service free, I am limited to a certain number of deep AI analyses per day.\n\n"
+                "**How to fix this:**\n"
+                "* Please wait until tomorrow when my limits reset.\n"
+                "* Or, update the `GITHUB_TOKEN` in your `.env` file with a fresh account."
+            )
+            
+        # If it's a completely different error, show the standard fallback
         return f"System Error: {str(e)}"
