@@ -1,94 +1,56 @@
 #!/usr/bin/env python
 """
-Quick test script to verify CyberGuard setup (OpenAI/GitHub Edition)
+CyberGuard Verification: Handles 'Missing' dependencies due to .gitignore
 """
 import os
 import sys
+import asyncio
+import django
 from dotenv import load_dotenv
 
-print("🔍 CyberGuard Setup Verification\n")
-print("=" * 50)
+async def main():
+    print("🔍 CyberGuard Environment Verification")
+    print("=" * 60)
 
-# Load environment
-load_dotenv()
+    # 1. Load Environment (Fails if .env was ignored)
+    env_exists = load_dotenv()
+    if not env_exists:
+        print("⚠️  Warning: .env file not found. Create one from .env.example")
 
-# Check Python version
-print(f"\n✓ Python version: {sys.version.split()[0]}")
-if sys.version_info < (3, 11):
-    print("  ⚠️  Warning: Python 3.11+ recommended")
+    # 2. Dependency Check (Includes the new 'dns' library)
+    # Your original script checked for django, openai, mcp, and requests
+    dependencies = ['django', 'openai', 'mcp', 'requests', 'dotenv', 'dns']
+    print("\n📦 Checking dependencies:")
+    for dep in dependencies:
+        try:
+            # Note: dnspython is imported as 'dns.resolver'
+            if dep == 'dns':
+                import dns.resolver
+            elif dep == 'dotenv':
+                import dotenv
+            else:
+                __import__(dep)
+            print(f"  ✓ {dep}")
+        except ImportError:
+            print(f"  ✗ {dep} - MISSING! Run: pip install -r requirements.txt")
 
-# Check dependencies
-dependencies = [
-    'django',
-    'openai',    # Changed from 'anthropic'
-    'mcp',
-    'requests',
-    'dotenv'     # Note: imports as 'python-dotenv' but check looks for module
-]
-
-print("\n📦 Checking dependencies:")
-for dep in dependencies:
+    # 3. Database Check (Validates if migrations were skipped)
+    print("\n🗄️  Database & Django Check:")
     try:
-        # Special case for python-dotenv which is imported as 'dotenv'
-        if dep == 'dotenv':
-            import dotenv
-            print(f"  ✓ {dep}")
-        else:
-            __import__(dep)
-            print(f"  ✓ {dep}")
-    except ImportError:
-        print(f"  ✗ {dep} - MISSING!")
-        print(f"    Run: pip install {dep}")
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'cyberguard_project.settings')
+        django.setup()
+        from core.models import ChatSession
+        # Django 5.x async database check
+        count = await ChatSession.objects.acount()
+        print(f"  ✓ Database: Ready. {count} sessions found.")
+    except Exception as e:
+        print(f"  ✗ Database Error: {e}")
+        print("    💡 Tip: Since db.sqlite3 is ignored, run: python manage.py migrate")
 
-# Check API keys
-print("\n🔑 Checking API keys:")
+    print("\n" + "=" * 60)
+    print("🚀 Quick Recovery:")
+    print("   1. pip install -r requirements.txt")
+    print("   2. python manage.py migrate")
 
-# Check for either standard OpenAI Key OR GitHub Token
-openai_key = os.getenv("OPENAI_API_KEY")
-github_token = os.getenv("GITHUB_TOKEN")
-
-if openai_key:
-    print(f"  ✓ OPENAI_API_KEY found: {openai_key[:15]}...")
-elif github_token:
-    print(f"  ✓ GITHUB_TOKEN found: {github_token[:15]}...")
-else:
-    print("  ✗ LLM API KEY not configured")
-    print("    Edit .env file and add either OPENAI_API_KEY or GITHUB_TOKEN")
-
-# Check VirusTotal Key
-vt_key = os.getenv("VIRUSTOTAL_API_KEY")
-if vt_key and vt_key != "your_virustotal_api_key_here":
-    print(f"  ✓ VIRUSTOTAL_API_KEY: {vt_key[:15]}...")
-else:
-    print("  ✗ VIRUSTOTAL_API_KEY not configured")
-    print("    Edit .env file and add your key")
-
-# Test MCP server import
-print("\n🛠️  Testing MCP server:")
-try:
-    from mcp.server.fastmcp import FastMCP
-    print("  ✓ MCP server imports work")
-except ImportError as e:
-    print(f"  ✗ MCP import failed: {e}")
-
-# Test MCP client import
-print("\n🤖 Testing MCP client:")
-try:
-    from mcp import ClientSession, StdioServerParameters
-    from mcp.client.stdio import stdio_client
-    print("  ✓ MCP client imports work")
-except ImportError as e:
-    print(f"  ✗ MCP client import failed: {e}")
-
-print("\n" + "=" * 50)
-print("\n📊 Summary:")
-if (openai_key or github_token) and vt_key:
-    print("  ✅ Setup looks good! Run: python manage.py runserver")
-else:
-    print("  ⚠️  Please configure API keys in .env file")
-
-print("\n🚀 Quick Start:")
-print("  1. Edit .env with your API keys")
-print("  2. Run: python manage.py runserver")
-print("  3. Open: http://localhost:8000")
-print()
+if __name__ == "__main__":
+    asyncio.run(main())
