@@ -1,0 +1,31 @@
+name: Python CI/CD
+
+on:
+  push:
+    branches: [ "main" ]  # Triggers when you push to main
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Run Python Script
+      env:
+        # This is where we inject your Secret API Key
+        MY_API_KEY: ${{ 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 }}
+      run: python app.py
