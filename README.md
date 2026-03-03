@@ -4,7 +4,7 @@
 
 A full-stack cybersecurity web application designed to protect elderly and vulnerable users from digital scams. It uses **GitHub Models (GPT-4o)**, **MCP (Model Context Protocol)**, and a **Persistent Database** to provide contextual, image-aware security analysis in a user-friendly, ChatGPT-style interface.
 
-project guide and document: https://docs.google.com/document/d/1d9OR21Ak-buttLL19adjg1KBNTKquQPkHgVs_yFA-oA/edit?tab=t.4nzq1oii2ic2
+Project guide and document: https://docs.google.com/document/d/1d9OR21Ak-buttLL19adjg1KBNTKquQPkHgVs_yFA-oA/edit?tab=t.4nzq1oii2ic2
 ## ✨ Key Features
 
 ### 👁️ Vision & Image Analysis
