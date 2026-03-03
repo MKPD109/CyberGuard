@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% block title %}Chat - CyberGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Layout Overrides */
+    .main-content { display: flex !important; flex-direction: column !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
+    .chat-layout { flex: 1 !important; display: flex !important; flex-direction: row !important; width: 100% !important; background: #ffffff; }
+    
+    /* Left Sidebar (History) */
+    .chat-sidebar { width: 260px !important; flex-shrink: 0 !important; background: #202123; padding: 10px; display: flex; flex-direction: column; overflow-y: auto; }
+    .new-chat-btn { display: block; padding: 12px; border: 1px solid #565869; border-radius: 6px; color: white; text-decoration: none; margin-bottom: 20px; text-align: center; font-weight: bold; transition: background 0.2s; }
+    .new-chat-btn:hover { background: #2a2b32; }
+    .history-title { font-size: 0.8em; color: #8e8ea0; margin-bottom: 10px; padding-left: 10px; text-transform: uppercase; letter-spacing: 1px; }
+    .chat-list { flex: 1; overflow-y: auto; }
+    
+    /* Delete Button Styles for Sidebar */
+    .chat-list-item { display: flex; align-items: center; justify-content: space-between; border-radius: 6px; transition: background 0.2s; margin-bottom: 5px; }
+    .chat-list-item:hover { background: #2a2b32; }
+    .chat-list-item a { flex: 1; display: block; padding: 12px; color: #ececf1; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-list-item a.active { background: #343541; border-left: 3px solid #10a37f; border-radius: 6px 0 0 6px; }
+    .delete-btn { background: transparent; border: none; color: #8e8ea0; padding: 10px; cursor: pointer; opacity: 0; transition: opacity 0.2s, color 0.2s; font-size: 1.1em; }
+    .chat-list-item:hover .delete-btn { opacity: 1; }
+    .delete-btn:hover { color: #ff6b6b; }
+
+    /* Right Chat Interface */
+    .chat-interface { flex: 1 !important; display: flex !important; flex-direction: column !important; background: #ffffff; position: relative; overflow: hidden; }
+    .chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+    
+    /* Chat Bubbles & Markdown Styles */
+    .message { max-width: 800px; margin: 0 auto; width: 100%; display: flex; }
+    .message.user { justify-content: flex-end; }
+    .message.assistant { justify-content: flex-start; }
+    .bubble { padding: 15px 20px; border-radius: 18px; max-width: 80%; font-size: 1.1em; line-height: 1.5; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .message.user .bubble { background: #667eea; color: white; border-bottom-right-radius: 4px; }
+    .message.assistant .bubble { background: #f4f7f6; color: #333; border-bottom-left-radius: 4px; border: 1px solid #e0e0e0; }
+    
+    /* Fix spacing for markdown elements inside bubbles */
+    .bubble p { margin-bottom: 10px; }
+    .bubble p:last-child { margin-bottom: 0; }
+    .bubble ul, .bubble ol { margin-left: 20px; margin-bottom: 10px; }
+    .bubble strong { font-weight: 700; }
+
+    /* Input Area */
+    .input-container { padding: 20px; max-width: 800px; margin: 0 auto; width: 100%; background: #ffffff; }
+    
+    /* UPDATED: Image Preview Thumbnail Styles 
+       Made the thumbnail 3x larger (max-height: 250px)
+    */
+    .preview-container { display: none; position: relative; width: fit-content; margin-bottom: 15px; margin-left: 10px; }
+    .preview-img { 
+        max-height: 250px; /* CHANGED from 80px to 250px */
+        border-radius: 12px; 
+        border: 3px solid #e0e0e0; 
+        object-fit: contain; /* Better for viewing whole screenshots */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
+    }
+    
+    /* Make the remove button slightly larger on a bigger thumbnail */
+    .remove-preview-btn { 
+        position: absolute; 
+        top: -10px; 
+        right: -10px; 
+        background: #ff6b6b; 
+        color: white; 
+        border: none; 
+        border-radius: 50%; 
+        width: 26px; /* Sightly larger */
+        height: 26px; /* Slightly larger */
+        cursor: pointer; 
+        font-size: 14px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+        transition: transform 0.2s; 
+    }
+    .remove-preview-btn:hover { transform: scale(1.1); }
+
+    .input-box { display: flex; align-items: flex-end; background: #f4f7f6; border: 1px solid #e0e0e0; border-radius: 12px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .input-box textarea { flex: 1; background: transparent; border: none; color: #333; resize: none; max-height: 200px; padding: 10px; font-size: 1.1em; outline: none; }
+    
+    /* Buttons */
+    .icon-btn { background: transparent; border: none; color: #667eea; cursor: pointer; font-size: 1.5em; padding: 5px 10px; transition: opacity 0.2s; }
+    .icon-btn:hover { opacity: 0.7; }
+    .send-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-weight: bold; margin-left: 10px; transition: opacity 0.2s; }
+    .send-btn:hover { opacity: 0.9; }
+    .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+    <div class="chat-sidebar">
+        <a href="{% url 'index' %}" class="new-chat-btn">➕ New Chat</a>
+        <div class="history-title">Previous Scans</div>
+        <div class="chat-list">
+            {% for session in sessions %}
+                <div class="chat-list-item">
+                    <a href="{% url 'chat_session' session.id %}" class="{% if current_session_id == session.id|stringformat:'s' %}active{% endif %}">
+                        💬 {{ session.title }}
+                    </a>
+                    <button class="delete-btn" onclick="deleteChat('{{ session.id }}', event)" title="Delete Chat">🗑️</button>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="chat-interface">
+        <div class="chat-window" id="chatWindow">
+            {% if not chat_messages %}
+                <div style="text-align: center; margin-top: 15vh; color: #666;">
+                    <div style="font-size: 4em; margin-bottom: 20px;">🛡️</div>
+                    <h2 style="color: #667eea; margin-bottom: 10px;">How can I help you stay safe today?</h2>
+                    <p style="font-size: 1.2em;">Paste a suspicious link, text message, or upload a screenshot.</p>
+                </div>
+            {% endif %}
+            
+            {% for msg in chat_messages %}
+                <div class="message {{ msg.role }}">
+                    <div class="bubble">{{ msg.content }}</div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="input-container">
+            <div id="loadingIndicator" style="display: none; text-align: center; color: #667eea; margin-bottom: 10px; font-weight: bold;">
+                🤖 CyberGuard is analyzing...
+            </div>
+            
+            <div id="imagePreviewContainer" class="preview-container">
+                <img id="imagePreview" class="preview-img" src="" alt="Image Preview">
+                <button id="removePreviewBtn" class="remove-preview-btn" title="Remove Image">✖</button>
+            </div>
+
+            <div class="input-box">
+                <textarea id="userInput" rows="1" placeholder="Message CyberGuard..."></textarea>
+                
+                <input type="file" id="imageInput" accept="image/png, image/jpeg, image/jpg" style="display: none;">
+                <button class="icon-btn" onclick="document.getElementById('imageInput').click()" title="Upload Image">📎</button>
+                
+                <button class="send-btn" id="scanBtn">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+    const chatWindow = document.getElementById('chatWindow');
+    const scanBtn = document.getElementById('scanBtn');
+    const userInput = document.getElementById('userInput');
+    const imageInput = document.getElementById('imageInput'); 
+    
+    // Preview Elements
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const removePreviewBtn = document.getElementById('removePreviewBtn');
+    
+    const loadingIndicator = document.getElementById('loadingIndicator');
+
+    let currentSessionId = "{{ current_session_id|default_if_none:'' }}";
+
+    // Parse existing markdown
+    document.querySelectorAll('.bubble').forEach(el => {
+        el.innerHTML = marked.parse(el.textContent);
+    });
+
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    userInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    // Helper function to completely clear the image selection and hide preview
+    function clearImageSelection() {
+        imageInput.value = ''; 
+        imagePreview.src = '';
+        imagePreviewContainer.style.display = 'none';
+    }
+
+    // When user selects a file, instantly read it and show the thumbnail
+    imageInput.addEventListener('change', () => {
+        if (imageInput.files.length > 0) {
+            const file = imageInput.files[0];
+            const reader = new FileReader();
+            
+            // Wait for file to be read, then show it
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        } else {
+            clearImageSelection();
+        }
+    });
+
+    // Delete preview if they click the 'X'
+    removePreviewBtn.addEventListener('click', clearImageSelection);
+
+    async function deleteChat(sessionId, event) {
+        event.preventDefault(); 
+        event.stopPropagation();
+        if (!confirm("Are you sure you want to delete this conversation?")) return;
+
+        try {
+            const response = await fetch(`/api/delete-session/${sessionId}/`, { method: 'POST' });
+            if (response.ok) {
+                if (currentSessionId === sessionId) {
+                    window.location.href = '/';
+                } else {
+                    event.target.closest('.chat-list-item').remove();
+                }
+            } else {
+                alert("Failed to delete chat.");
+            }
+        } catch (error) {
+            alert("Network error: Could not delete.");
+        }
+    }
+
+    function appendMessage(role, content) {
+        const greeting = chatWindow.querySelector('div[style*="text-align: center"]');
+        if (greeting) greeting.remove();
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+        msgDiv.innerHTML = `<div class="bubble">${marked.parse(content)}</div>`;
+        chatWindow.appendChild(msgDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    scanBtn.addEventListener('click', async () => {
+        const input = userInput.value.trim();
+        const imageFile = imageInput.files[0]; 
+        
+        if (!input && !imageFile) return;
+
+        appendMessage('user', input || "[Screenshot Uploaded]");
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        
+        scanBtn.disabled = true;
+        loadingIndicator.style.display = 'block';
+
+        let base64Image = null;
+        if (imageFile) {
+            base64Image = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(imageFile);
+            });
+        }
+
+        // Hide the preview immediately upon sending
+        clearImageSelection();
+
+        try {
+            const response = await fetch('/api/analyze/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    input: input || "Please analyze this image.", 
+                    image: base64Image,
+                    session_id: currentSessionId || null
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                appendMessage('assistant', data.analysis);
+                
+                if (!currentSessionId && data.session_id) {
+                    currentSessionId = data.session_id;
+                    window.history.pushState({}, '', `/chat/${currentSessionId}/`);
+                    setTimeout(() => location.reload(), 2000); 
+                }
+            } else {
+                appendMessage('assistant', 'Error: ' + (data.error || 'An error occurred'));
+            }
+        } catch (error) {
+            appendMessage('assistant', 'Network error: ' + error.message);
+        } finally {
+            loadingIndicator.style.display = 'none';
+            scanBtn.disabled = false;
+        }
+    });
+
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            scanBtn.click();
+        }
+    });
+</script>
+{% endblock %}

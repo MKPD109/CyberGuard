@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Knowledge Hub - CyberGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hub-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .hub-header h1 {
+        color: #667eea;
+        font-size: 2.5em;
+        margin-bottom: 15px;
+    }
+    
+    .hub-header p {
+        color: #555;
+        font-size: 1.2em;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    .scam-card {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        border-left: 6px solid #ff6b6b;
+        transition: transform 0.2s;
+    }
+
+    .scam-card:hover {
+        transform: translateX(10px);
+    }
+
+    .scam-card.bank { border-left-color: #4facfe; }
+    .scam-card.tech { border-left-color: #f7b733; }
+
+    .scam-title {
+        font-size: 1.6em;
+        color: #333;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .scam-example {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-style: italic;
+        color: #666;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+    }
+
+    .scam-text {
+        font-size: 1.15em;
+        line-height: 1.7;
+        color: #444;
+        margin-bottom: 20px;
+    }
+
+    .golden-rule {
+        background: #e3f2fd;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: #0d47a1;
+        font-weight: bold;
+        font-size: 1.15em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .try-it-btn {
+        display: inline-block;
+        margin-top: 15px;
+        padding: 10px 20px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 50px;
+        font-weight: bold;
+        transition: background 0.3s;
+    }
+
+    .try-it-btn:hover {
+        background: #5a6fd6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="hub-header">
+        <h1>📚 Security Knowledge Hub</h1>
+        <p>You don't need to be a computer expert to stay safe online. Learn how to spot the three most common psychological tricks scammers use.</p>
+    </div>
+
+    <div class="scam-card">
+        <h2 class="scam-title">📦 The "Missed Delivery" Text</h2>
+        <div class="scam-example">
+            "URGENT: Royal Mail tried to deliver your parcel today. Please pay a £1.99 shipping fee to reschedule here: http://royal-mail-update-tracker.com"
+        </div>
+        <p class="scam-text">
+            <strong>The Trick:</strong> Scammers know you might be waiting for a package. They create a fake sense of urgency to make you panic and click the link without thinking. The website looks exactly like the real post office, but it is designed to steal your credit card details.
+        </p>
+        <div class="golden-rule">
+            ⭐ Golden Rule: Never click links in unexpected text messages. Always go directly to the official delivery website by typing it into your browser yourself.
+        </div>
+        <a href="{% url 'index' %}" class="try-it-btn">Try scanning a delivery text ➔</a>
+    </div>
+
+    <div class="scam-card bank">
+        <h2 class="scam-title">🏦 The "Locked Bank Account"</h2>
+        <div class="scam-example">
+            "SECURITY ALERT: We have detected suspicious activity on your account. Your card has been locked. Click here to verify your identity immediately."
+        </div>
+        <p class="scam-text">
+            <strong>The Trick:</strong> This scam relies on fear. By telling you your money is at risk, they hope you will blindly follow their instructions and hand over your passwords or PIN numbers.
+        </p>
+        <div class="golden-rule">
+            ⭐ Golden Rule: Your bank will NEVER ask for your PIN, password, or ask you to move money to a "safe account." If you are worried, call the phone number printed on the back of your actual bank card.
+        </div>
+    </div>
+
+    <div class="scam-card tech">
+        <h2 class="scam-title">💻 The "Loud Computer Warning"</h2>
+        <div class="scam-example">
+            (A loud, flashing red screen appears on your computer) "WARNING! Your computer is infected with a virus! Do not turn it off. Call Apple/Microsoft support immediately at 0800-123-4567."
+        </div>
+        <p class="scam-text">
+            <strong>The Trick:</strong> This is just a malicious webpage designed to lock up your browser. If you call the number, a fake technician will answer and ask you to pay hundreds of dollars to "fix" a virus you don't actually have.
+        </p>
+        <div class="golden-rule">
+            ⭐ Golden Rule: Real tech companies like Microsoft or Apple do not put phone numbers in error messages. Just turn your computer off and back on again—the scary message will disappear!
+        </div>
+    </div>
+</div>
+{% endblock %}
