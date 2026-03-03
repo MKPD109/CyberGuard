@@ -143,7 +143,8 @@
             
             {% for msg in chat_messages %}
                 <div class="message {{ msg.role }}">
-                    <div class="bubble" data-raw-content="{{ msg.content|force_escape }}">{{ msg.content }}</div>
+                    <textarea class="raw-content-store" style="display: none;">{{ msg.content|safe }}</textarea>
+                    <div class="bubble"></div>
                 </div>
             {% endfor %}
         </div>
@@ -189,11 +190,49 @@
 
     let currentSessionId = "{{ current_session_id|default_if_none:'' }}";
 
-    // Parse existing markdown
-    document.querySelectorAll('.bubble').forEach(el => {
-        const rawContent = el.getAttribute('data-raw-content') || el.textContent;
-        el.innerHTML = marked.parse(rawContent);
+    // 1. Parse existing history safely
+    document.querySelectorAll('.message').forEach(el => {
+        const store = el.querySelector('.raw-content-store');
+        if (!store) return;
+        
+        let rawContent = store.value;
+        const bubble = el.querySelector('.bubble');
+
+        let imageTag = "";
+        // If there is an image, pull it OUT of the text before parsing
+        if (rawContent.includes('<img src="data:image')) {
+            const imgEndIndex = rawContent.indexOf('/>') + 2;
+            imageTag = rawContent.substring(0, imgEndIndex);
+            rawContent = rawContent.substring(imgEndIndex); // Keep only the text
+        }
+
+        // Draw the image natively, then let marked.js handle the text
+        bubble.innerHTML = imageTag + marked.parse(rawContent);
     });
+
+    // 2. Update appendMessage to also safely separate the image
+    function appendMessage(role, content) {
+        const greeting = chatWindow.querySelector('div[style*="text-align: center"]');
+        if (greeting) greeting.remove();
+
+        let imageTag = "";
+        let markdownText = content;
+
+        // If there is an image, pull it OUT of the text before parsing
+        if (content.includes('<img src="data:image')) {
+            const imgEndIndex = content.indexOf('/>') + 2;
+            imageTag = content.substring(0, imgEndIndex);
+            markdownText = content.substring(imgEndIndex); // Keep only the text
+        }
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+        // Draw the image natively, then let marked.js handle the text
+        msgDiv.innerHTML = `<div class="bubble">${imageTag} ${marked.parse(markdownText)}</div>`;
+        
+        chatWindow.appendChild(msgDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
 
     chatWindow.scrollTop = chatWindow.scrollHeight;
 
@@ -250,17 +289,6 @@
         }
     }
 
-    function appendMessage(role, content) {
-        const greeting = chatWindow.querySelector('div[style*="text-align: center"]');
-        if (greeting) greeting.remove();
-
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${role}`;
-        msgDiv.innerHTML = `<div class="bubble">${marked.parse(content)}</div>`;
-        chatWindow.appendChild(msgDiv);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
-
     scanBtn.addEventListener('click', async () => {
         const input = userInput.value.trim();
         const imageFile = imageInput.files[0]; 
@@ -271,7 +299,7 @@
         scanBtn.disabled = true;
         loadingIndicator.style.display = 'block';
 
-        // 2. THIS WAS MISSING: We MUST convert the image to Base64 before doing anything!
+        // 2. We MUST convert the image to Base64 before doing anything!
         let base64Image = null;
         if (imageFile) {
             base64Image = await new Promise((resolve) => {
@@ -327,6 +355,7 @@
             scanBtn.disabled = false;
         }
     });
+
     userInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();

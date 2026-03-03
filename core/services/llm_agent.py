@@ -1,9 +1,27 @@
 import os
 import json
+import sys
+from mcp.client.stdio import stdio_client, StdioServerParameters
 from openai import AsyncOpenAI
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from dotenv import load_dotenv
+
+# 1. Calculate the absolute path to the root of your project
+# (This goes up a few folders from llm_agent.py to find the main directory)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 2. Point exactly to your mcp_server.py file
+# IMPORTANT: If your mcp_server.py is inside core/services/, change "mcp_server.py" below to "core/services/mcp_server.py"
+SERVER_PATH = os.path.join(BASE_DIR, "mcp_server.py")
+
+# 3. Use sys.executable and the absolute SERVER_PATH
+server_params = StdioServerParameters(
+    command=sys.executable,
+    args=[SERVER_PATH], 
+    # Optional but highly recommended: pass your environment variables down so the server has them
+    env=os.environ.copy() 
+)
 
 # Load environment variables
 load_dotenv()
@@ -42,7 +60,7 @@ async def run_analysis(user_input: str, history: list = None, image_b64: str = N
 
     # MCP server parameters
     server_params = StdioServerParameters(
-        command="python",
+        command=sys.executable,
         args=["mcp_server.py"],
         env=None
     )
