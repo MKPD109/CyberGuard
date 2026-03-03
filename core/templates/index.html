@@ -31,9 +31,34 @@
     .message { max-width: 800px; margin: 0 auto; width: 100%; display: flex; }
     .message.user { justify-content: flex-end; }
     .message.assistant { justify-content: flex-start; }
-    .bubble { padding: 15px 20px; border-radius: 18px; max-width: 80%; font-size: 1.1em; line-height: 1.5; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    
+    /* ADDED: word-wrap and overflow-wrap to force text to stay inside the box */
+    .bubble { 
+        padding: 15px 20px; 
+        border-radius: 18px; 
+        max-width: 80%; 
+        font-size: 1.1em; 
+        line-height: 1.5; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        word-wrap: break-word; 
+        overflow-wrap: break-word;
+        white-space: normal;
+    }
+    
     .message.user .bubble { background: #667eea; color: white; border-bottom-right-radius: 4px; }
     .message.assistant .bubble { background: #f4f7f6; color: #333; border-bottom-left-radius: 4px; border: 1px solid #e0e0e0; }
+    
+    /* Fix spacing for markdown elements inside bubbles */
+    .bubble p { margin-bottom: 10px; max-width: 100%; }
+    .bubble p:last-child { margin-bottom: 0; }
+    .bubble ul, .bubble ol { margin-left: 20px; margin-bottom: 10px; max-width: 100%; }
+    .bubble strong { font-weight: 700; }
+    
+    /* Force images inside the chat bubbles to look like elegant attachments */
+    .bubble img { max-width: 100%; max-height: 300px; border-radius: 10px; margin-top: 5px; margin-bottom: 10px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); object-fit: contain; }
+    
+    /* Prevent code blocks from breaking the bubble width */
+    .bubble pre, .bubble code { max-width: 100%; overflow-x: auto; white-space: pre-wrap; }
     
     /* Fix spacing for markdown elements inside bubbles */
     .bubble p { margin-bottom: 10px; }
@@ -118,7 +143,7 @@
             
             {% for msg in chat_messages %}
                 <div class="message {{ msg.role }}">
-                    <div class="bubble">{{ msg.content }}</div>
+                    <div class="bubble" data-raw-content="{{ msg.content|force_escape }}">{{ msg.content }}</div>
                 </div>
             {% endfor %}
         </div>
@@ -166,7 +191,8 @@
 
     // Parse existing markdown
     document.querySelectorAll('.bubble').forEach(el => {
-        el.innerHTML = marked.parse(el.textContent);
+        const rawContent = el.getAttribute('data-raw-content') || el.textContent;
+        el.innerHTML = marked.parse(rawContent);
     });
 
     chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -241,13 +267,11 @@
         
         if (!input && !imageFile) return;
 
-        appendMessage('user', input || "[Screenshot Uploaded]");
-        userInput.value = '';
-        userInput.style.height = 'auto';
-        
+        // 1. Disable button and show loading immediately
         scanBtn.disabled = true;
         loadingIndicator.style.display = 'block';
 
+        // 2. THIS WAS MISSING: We MUST convert the image to Base64 before doing anything!
         let base64Image = null;
         if (imageFile) {
             base64Image = await new Promise((resolve) => {
@@ -257,9 +281,21 @@
             });
         }
 
-        // Hide the preview immediately upon sending
+        // 3. Construct the text/HTML to draw the image in the chat bubble
+        let displayContent = input;
+        if (base64Image) {
+            displayContent = `<img src="${base64Image}" style="max-width: 100%; max-height: 300px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" alt="Uploaded Image" />\n\n${input}`;
+        }
+        
+        // 4. Push to screen exactly ONCE
+        appendMessage('user', displayContent || "[Screenshot Uploaded]");
+
+        // 5. Clear the inputs and hide the preview
+        userInput.value = '';
+        userInput.style.height = 'auto';
         clearImageSelection();
 
+        // 6. Send everything to Django
         try {
             const response = await fetch('/api/analyze/', {
                 method: 'POST',
@@ -291,7 +327,6 @@
             scanBtn.disabled = false;
         }
     });
-
     userInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();

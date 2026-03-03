@@ -27,5 +27,5 @@ jobs:
     - name: Run Python Script
       env:
         # This is where we inject your Secret API Key
-        MY_API_KEY: ${{ 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 }}
+        MY_API_KEY: ${{secrets.GITHUB_TOKEN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 }}
       run: python app.py

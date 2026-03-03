@@ -1,4 +1,5 @@
 import json
+import re
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -66,16 +67,22 @@ async def analyze_risk(request):
         # 2. LOAD HISTORY FROM DATABASE
         # Fetch all previous messages for this session
         db_messages = ChatMessage.objects.filter(session=session).order_by('created_at')
-        history = [
-            {"role": msg.role, "content": msg.content} 
-            async for msg in db_messages
-        ]
+        history = []
+        async for msg in db_messages:
+            # NEW: Matches HTML img tags instead of Markdown
+            clean_content = re.sub(r'<img src="data:image[^>]+>', '[Image Uploaded]', msg.content)
+            history.append({"role": msg.role, "content": clean_content})
 
-        # 3. SAVE THE USER'S NEW MESSAGE
+        # 3. FORMAT AND SAVE USER MESSAGE
+        message_to_save = user_input
+        if image_data:
+            # NEW: Use standard HTML so the browser doesn't crash parsing Markdown
+            message_to_save = f'<img src="{image_data}" style="max-width: 100%; max-height: 300px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" alt="Uploaded Image" />\n\n{user_input}'
+        
         await ChatMessage.objects.acreate(
             session=session,
             role="user",
-            content=user_input if user_input else "[Image Uploaded]"
+            content=message_to_save.strip() if message_to_save.strip() else "[Screenshot Uploaded]"
         )
 
         # 4. RUN THE AI AGENT (Pass the DB history!)

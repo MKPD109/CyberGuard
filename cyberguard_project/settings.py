@@ -63,3 +63,6 @@ STATIC_URL = 'static/'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Allow large Base64 image strings to be sent to the server
+DATA_UPLOAD_MAX_MEMORY_SIZE = 15728640  # 15 MB
