@@ -2,11 +2,13 @@
 MCP Server for CyberGuard
 Provides URL reputation scanning via VirusTotal API
 """
+import re
 import os
 import base64
 import requests
 import dns.resolver
 import urllib.parse
+import email.utils
 from datetime import datetime
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
@@ -78,6 +80,77 @@ def scan_url_reputation(url: str) -> str:
     except Exception as e:
         return f"Error scanning URL: {str(e)}"
 @mcp.tool()
+def detect_scam_patterns(text: str) -> str:
+    """
+    Analyzes text for common scam indicators like urgency, 
+    poor grammar, and suspicious formatting.
+    """
+    try:
+        # 1. Define high-risk patterns
+        urgency_words = ["urgent", "immediately", "action required", "suspended", "blocked", "last warning"]
+        scam_keywords = ["gift card", "bitcoin", "refund", "overdue", "unauthorized", "inheritance"]
+        
+        text_lower = text.lower()
+        
+        # 2. Use 're' to find exact word matches (ignoring punctuation)
+        # The \b ensures we match 'urgent' but NOT 'detergent'
+        urgency_matches = [word for word in urgency_words if re.search(rf'\b{word}\b', text_lower)]
+        keyword_matches = [word for word in scam_keywords if re.search(rf'\b{word}\b', text_lower)]
+        
+        # 3. Use 're' to detect excessive capitalization ("SHOUTING")
+        # Finds every individual uppercase letter
+        caps_matches = re.findall(r'[A-Z]', text)
+        caps_ratio = len(caps_matches) / len(text) if len(text) > 0 else 0
+        
+        # 4. Calculate Risk Score
+        risk_score = 0
+        if urgency_matches: risk_score += 30
+        if len(caps_matches) > 10 and caps_ratio > 0.25: risk_score += 20
+        if keyword_matches: risk_score += 40
+        
+        # 5. Determine Verdict
+        if risk_score >= 70:
+            verdict = "🔴 HIGH RISK: This message has many hallmarks of a scam."
+        elif risk_score >= 40:
+            verdict = "🟡 MEDIUM RISK: Some suspicious language was detected."
+        else:
+            verdict = "🟢 LOW RISK: No obvious scam patterns found."
+            
+        return f"""
+        [Scam Pattern Analysis]
+        Urgency Detected: {', '.join(urgency_matches) if urgency_matches else 'None'}
+        Scam Keywords: {', '.join(keyword_matches) if keyword_matches else 'None'}
+        Formatting: {'⚠️ Excessive Capitalization' if caps_ratio > 0.25 else 'Normal'}
+        
+        Final Verdict: {verdict}
+        
+        Note: This is an automated check. Scammers are clever; always stay cautious!
+        """
+        
+    except Exception as e:
+        return f"Error analyzing text patterns: {str(e)}"
+
+@mcp.tool()
+def unshorten_url(short_url: str) -> str:
+    """
+    Follows redirects to find the final destination of a shortened link.
+    Use this if a user provides a tiny or suspicious short link before scanning it with other tools.
+    """
+    try:
+        # We use a HEAD request so we don't download the whole page, just check the destination
+        # allow_redirects=True tells requests to follow the chain to the very end
+        response = requests.head(short_url, allow_redirects=True, timeout=10)
+        final_url = response.url
+        
+        if final_url.rstrip('/') == short_url.rstrip('/'):
+            return f"The link is not shortened. Destination: {final_url}"
+            
+        return f"⚠️ This is a shortened link! It actually leads to: {final_url}"
+        
+    except Exception as e:
+        return f"Could not follow the link: {str(e)}"
+@mcp.tool()
+
 def scan_domain_whois(domain: str) -> str:
     """
     Fetches WHOIS registration data to determine the age and owner of a domain.
@@ -217,7 +290,34 @@ def scan_domain_dns(domain_or_url: str) -> str:
     except Exception as e:
         return f"Error scanning DNS for {domain_or_url}: {str(e)}"    
 
+@mcp.tool()
+def analyze_email_address(from_line: str) -> str:
+    """
+    Parses a 'From' line (e.g., 'Amazon Support <scammer@gmail.com>') 
+    to separate the display name from the actual email address.
+    """
+    try:
+        name, address = email.utils.parseaddr(from_line)
+        domain = address.split('@')[-1] if '@' in address else "Unknown"
+        
+        # Logic to flag generic domains claiming to be big brands
+        trusted_brands = ["amazon.com", "microsoft.com", "google.com", "apple.com", "paypal.com"]
+        is_suspicious = False
+        if any(brand.split('.')[0] in name.lower() for brand in trusted_brands):
+            if domain.lower() not in trusted_brands:
+                is_suspicious = True
 
+        status = "🚨 SUSPICIOUS: Name claims to be a brand but the email domain is different." if is_suspicious else "✅ Domain matches/No obvious spoofing."
+        
+        return f"""
+        [Email Analysis]
+        Display Name: {name}
+        Actual Email: {address}
+        Domain: {domain}
+        Verdict: {status}
+        """
+    except Exception as e:
+        return f"Error analyzing email: {str(e)}"
 if __name__ == "__main__":
     # Run the MCP server
     mcp.run()
