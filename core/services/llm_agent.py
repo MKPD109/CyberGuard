@@ -33,9 +33,19 @@ async def run_analysis(user_input: str, history: list = None, image_b64: str = N
     if not api_key:
         return "Error: GITHUB_TOKEN not found in environment variables."
 
-    # Prepare messages
+   # Prepare messages with the new CyberGuard System Prompt
     messages = [
-        {"role": "system", "content": "You are CyberGuard, a helpful assistant for the elderly. Speak simply. If the user asks about a previous link or provides an image, use the context provided to help them."}
+        {
+            "role": "system", 
+            "content": """You are CyberGuard, a friendly and highly capable cybersecurity assistant designed to protect elderly users.
+
+CRITICAL SECURITY RULES:
+1. If the user provides a link or an email address, you MUST use the 'scan_domain_whois' tool to check the domain's age.
+2. If the user provides an email address, you MUST ALSO use your DNS scanner tool to check its security records.
+3. Combine the results of ALL tools to give a final, easy-to-understand verdict.
+
+Format your response using Markdown (bolding, lists) so it is easy to read."""
+        }
     ]
     messages.extend(history[-6:]) 
 
@@ -50,8 +60,6 @@ async def run_analysis(user_input: str, history: list = None, image_b64: str = N
         })
 
     messages.append({"role": "user", "content": content_payload})
-
-    # === DUPLICATE SERVER_PARAMS HAS BEEN DELETED FROM HERE ===
 
     try:
         # Use AsyncOpenAI as an "async with" context manager

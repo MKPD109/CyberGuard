@@ -7,6 +7,8 @@ import base64
 import requests
 import dns.resolver
 import urllib.parse
+import whois
+from datetime import datetime
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
@@ -76,7 +78,43 @@ def scan_url_reputation(url: str) -> str:
         return f"Network error while scanning URL: {str(e)}"
     except Exception as e:
         return f"Error scanning URL: {str(e)}"
-    
+@mcp.tool()
+def scan_domain_whois(domain: str) -> str:
+    """
+    Fetches WHOIS registration data to determine the age and owner of a domain.
+    CRITICAL USE: Always use this to check suspicious links, URLs, or email domains. 
+    If a domain is less than 30 days old but claims to be a trusted company, flag it as a scam.
+    """
+    try:
+        # 1. Fetch the domain data
+        domain_info = whois.whois(domain)
+        
+        # 2. Extract the creation date (sometimes it returns a list, so we grab the first one)
+        creation_date = domain_info.creation_date
+        if isinstance(creation_date, list):
+            creation_date = creation_date[0]
+            
+        registrar = domain_info.registrar
+        
+        # 3. Calculate exactly how old the domain is
+        if creation_date:
+            age_in_days = (datetime.now() - creation_date).days
+            age_warning = "🚨 HIGH RISK (Brand new domain!)" if age_in_days < 30 else "✅ Established domain"
+        else:
+            return f"WHOIS Data for {domain}: Could not determine creation date. Treat with caution."
+
+        # 4. Return the data to the AI agent
+        return f"""
+        [WHOIS Analysis for {domain}]
+        Registrar: {registrar}
+        Created On: {creation_date.strftime('%Y-%m-%d')}
+        Age: {age_in_days} days old
+        Status: {age_warning}
+        """
+        
+    except Exception as e:
+        return f"WHOIS Lookup Failed for {domain}: {str(e)}"
+        
 @mcp.tool()
 def scan_domain_dns(domain_or_url: str) -> str:
     """
