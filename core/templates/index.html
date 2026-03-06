@@ -32,7 +32,6 @@
     .message.user { justify-content: flex-end; }
     .message.assistant { justify-content: flex-start; }
     
-    /* ADDED: word-wrap and overflow-wrap to force text to stay inside the box */
     .bubble { 
         padding: 15px 20px; 
         border-radius: 18px; 
@@ -59,45 +58,18 @@
     
     /* Prevent code blocks from breaking the bubble width */
     .bubble pre, .bubble code { max-width: 100%; overflow-x: auto; white-space: pre-wrap; }
-    
-    /* Fix spacing for markdown elements inside bubbles */
-    .bubble p { margin-bottom: 10px; }
-    .bubble p:last-child { margin-bottom: 0; }
-    .bubble ul, .bubble ol { margin-left: 20px; margin-bottom: 10px; }
-    .bubble strong { font-weight: 700; }
 
     /* Input Area */
     .input-container { padding: 20px; max-width: 800px; margin: 0 auto; width: 100%; background: #ffffff; }
     
-    /* UPDATED: Image Preview Thumbnail Styles 
-       Made the thumbnail 3x larger (max-height: 250px)
-    */
+    /* Image Preview Thumbnail Styles */
     .preview-container { display: none; position: relative; width: fit-content; margin-bottom: 15px; margin-left: 10px; }
-    .preview-img { 
-        max-height: 250px; /* CHANGED from 80px to 250px */
-        border-radius: 12px; 
-        border: 3px solid #e0e0e0; 
-        object-fit: contain; /* Better for viewing whole screenshots */
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
-    }
+    .preview-img { max-height: 250px; border-radius: 12px; border: 3px solid #e0e0e0; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
     
-    /* Make the remove button slightly larger on a bigger thumbnail */
     .remove-preview-btn { 
-        position: absolute; 
-        top: -10px; 
-        right: -10px; 
-        background: #ff6b6b; 
-        color: white; 
-        border: none; 
-        border-radius: 50%; 
-        width: 26px; /* Sightly larger */
-        height: 26px; /* Slightly larger */
-        cursor: pointer; 
-        font-size: 14px; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+        position: absolute; top: -10px; right: -10px; background: #ff6b6b; color: white; border: none; 
+        border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 14px; 
+        display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
         transition: transform 0.2s; 
     }
     .remove-preview-btn:hover { transform: scale(1.1); }
@@ -111,6 +83,73 @@
     .send-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-weight: bold; margin-left: 10px; transition: opacity 0.2s; }
     .send-btn:hover { opacity: 0.9; }
     .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* ========================================= */
+    /* NEW CSS: ANIMATED SVG LOADING INDICATOR   */
+    /* ========================================= */
+    .cyberguard-loader-container {
+        display: none; /* Hidden by default, toggled to flex by JS */
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 20px 20px 20px;
+        text-align: center;
+    }
+
+    .scanner-animation-wrapper {
+        position: relative;
+        width: 70px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+    }
+
+    .ripple {
+        position: absolute;
+        width: 45px;
+        height: 45px;
+        background-color: rgba(76, 175, 80, 0.2);
+        border-radius: 50%;
+        animation: slow-ripple 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    .ripple:nth-child(2) {
+        animation-delay: 1.5s;
+    }
+
+    .shield-icon {
+        position: relative;
+        z-index: 10;
+        color: #1565C0;
+        animation: gentle-breathe 3s ease-in-out infinite;
+    }
+
+    .scanning-text {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1565C0;
+        margin: 0;
+        letter-spacing: 0.5px;
+    }
+
+    .scanning-subtext {
+        font-size: 0.95rem;
+        color: #666;
+        margin-top: 5px;
+        margin-bottom: 0;
+    }
+
+    @keyframes slow-ripple {
+        0% { transform: scale(0.8); opacity: 1; }
+        100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    @keyframes gentle-breathe {
+        0%, 100% { transform: scale(1); filter: drop-shadow(0px 4px 6px rgba(21, 101, 192, 0.2)); }
+        50% { transform: scale(1.08); filter: drop-shadow(0px 8px 12px rgba(76, 175, 80, 0.4)); }
+    }
 </style>
 {% endblock %}
 
@@ -150,8 +189,18 @@
         </div>
 
         <div class="input-container">
-            <div id="loadingIndicator" style="display: none; text-align: center; color: #667eea; margin-bottom: 10px; font-weight: bold;">
-                🤖 CyberGuard is analyzing...
+            
+            <!-- NEW: Animated SVG Loading Indicator -->
+            <div id="loadingIndicator" class="cyberguard-loader-container" role="status" aria-live="polite">
+                <div class="scanner-animation-wrapper">
+                    <div class="ripple"></div>
+                    <div class="ripple"></div>
+                    <svg class="shield-icon" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                </div>
+                <h2 class="scanning-text">CyberGuard is scanning...</h2>
+                <p class="scanning-subtext">Please wait a moment while we check for safety.</p>
             </div>
             
             <div id="imagePreviewContainer" class="preview-container">
@@ -190,7 +239,7 @@
 
     let currentSessionId = "{{ current_session_id|default_if_none:'' }}";
 
-    // 1. Parse existing history safely
+    // Parse existing history safely
     document.querySelectorAll('.message').forEach(el => {
         const store = el.querySelector('.raw-content-store');
         if (!store) return;
@@ -199,18 +248,16 @@
         const bubble = el.querySelector('.bubble');
 
         let imageTag = "";
-        // If there is an image, pull it OUT of the text before parsing
         if (rawContent.includes('<img src="data:image')) {
             const imgEndIndex = rawContent.indexOf('/>') + 2;
             imageTag = rawContent.substring(0, imgEndIndex);
-            rawContent = rawContent.substring(imgEndIndex); // Keep only the text
+            rawContent = rawContent.substring(imgEndIndex);
         }
 
-        // Draw the image natively, then let marked.js handle the text
         bubble.innerHTML = imageTag + marked.parse(rawContent);
     });
 
-    // 2. Update appendMessage to also safely separate the image
+    // Update appendMessage to safely separate the image
     function appendMessage(role, content) {
         const greeting = chatWindow.querySelector('div[style*="text-align: center"]');
         if (greeting) greeting.remove();
@@ -218,16 +265,14 @@
         let imageTag = "";
         let markdownText = content;
 
-        // If there is an image, pull it OUT of the text before parsing
         if (content.includes('<img src="data:image')) {
             const imgEndIndex = content.indexOf('/>') + 2;
             imageTag = content.substring(0, imgEndIndex);
-            markdownText = content.substring(imgEndIndex); // Keep only the text
+            markdownText = content.substring(imgEndIndex);
         }
 
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${role}`;
-        // Draw the image natively, then let marked.js handle the text
         msgDiv.innerHTML = `<div class="bubble">${imageTag} ${marked.parse(markdownText)}</div>`;
         
         chatWindow.appendChild(msgDiv);
@@ -241,20 +286,17 @@
         this.style.height = (this.scrollHeight) + 'px';
     });
 
-    // Helper function to completely clear the image selection and hide preview
     function clearImageSelection() {
         imageInput.value = ''; 
         imagePreview.src = '';
         imagePreviewContainer.style.display = 'none';
     }
 
-    // When user selects a file, instantly read it and show the thumbnail
     imageInput.addEventListener('change', () => {
         if (imageInput.files.length > 0) {
             const file = imageInput.files[0];
             const reader = new FileReader();
             
-            // Wait for file to be read, then show it
             reader.onload = function(e) {
                 imagePreview.src = e.target.result;
                 imagePreviewContainer.style.display = 'block';
@@ -265,7 +307,6 @@
         }
     });
 
-    // Delete preview if they click the 'X'
     removePreviewBtn.addEventListener('click', clearImageSelection);
 
     async function deleteChat(sessionId, event) {
@@ -295,11 +336,11 @@
         
         if (!input && !imageFile) return;
 
-        // 1. Disable button and show loading immediately
+        // 1. Disable button and show loading immediately (Updated for Flex layout!)
         scanBtn.disabled = true;
-        loadingIndicator.style.display = 'block';
+        loadingIndicator.style.display = 'flex';
 
-        // 2. We MUST convert the image to Base64 before doing anything!
+        // 2. Convert image to Base64
         let base64Image = null;
         if (imageFile) {
             base64Image = await new Promise((resolve) => {
@@ -309,21 +350,21 @@
             });
         }
 
-        // 3. Construct the text/HTML to draw the image in the chat bubble
+        // 3. Construct the text/HTML
         let displayContent = input;
         if (base64Image) {
             displayContent = `<img src="${base64Image}" style="max-width: 100%; max-height: 300px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" alt="Uploaded Image" />\n\n${input}`;
         }
         
-        // 4. Push to screen exactly ONCE
+        // 4. Push to screen
         appendMessage('user', displayContent || "[Screenshot Uploaded]");
 
-        // 5. Clear the inputs and hide the preview
+        // 5. Clear inputs
         userInput.value = '';
         userInput.style.height = 'auto';
         clearImageSelection();
 
-        // 6. Send everything to Django
+        // 6. Send to Django
         try {
             const response = await fetch('/api/analyze/', {
                 method: 'POST',
@@ -343,6 +384,7 @@
                 if (!currentSessionId && data.session_id) {
                     currentSessionId = data.session_id;
                     window.history.pushState({}, '', `/chat/${currentSessionId}/`);
+                    // We don't necessarily need to reload, but kept to match your logic
                     setTimeout(() => location.reload(), 2000); 
                 }
             } else {
@@ -351,6 +393,7 @@
         } catch (error) {
             appendMessage('assistant', 'Network error: ' + error.message);
         } finally {
+            // Hide loading indicator again
             loadingIndicator.style.display = 'none';
             scanBtn.disabled = false;
         }

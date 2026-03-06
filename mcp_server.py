@@ -86,34 +86,52 @@ def scan_domain_whois(domain: str) -> str:
     If a domain is less than 30 days old but claims to be a trusted company, flag it as a scam.
     """
     try:
-        # 1. Fetch the domain data
-        domain_info = whois.whois(domain)
+        # 1. Clean up the domain string just in case the AI passes a full URL
+        if "://" in domain:
+            import urllib.parse
+            domain = urllib.parse.urlparse(domain).netloc
+        domain = domain.replace("www.", "").strip("/")
         
-        # 2. Extract the creation date (sometimes it returns a list, so we grab the first one)
-        creation_date = domain_info.creation_date
-        if isinstance(creation_date, list):
-            creation_date = creation_date[0]
+        # 2. Use an HTTPS API to bypass University Port 43 Firewalls!
+        import requests
+        from datetime import datetime
+        
+        response = requests.get(f"https://networkcalc.com/api/dns/whois/{domain}", timeout=10)
+        
+        if response.status_code != 200:
+            return f"WHOIS API Error: Could not fetch data for {domain}."
             
-        registrar = domain_info.registrar
+        data = response.json()
+        if data.get("status") != "OK":
+            return f"WHOIS Lookup Failed: Domain {domain} might not exist or is hidden."
+            
+        whois_data = data.get("whois", {})
+        registrar = whois_data.get("registrar", "Unknown")
+        creation_date_str = whois_data.get("creation_date")
         
-        # 3. Calculate exactly how old the domain is
-        if creation_date:
-            age_in_days = (datetime.now() - creation_date).days
-            age_warning = "🚨 HIGH RISK (Brand new domain!)" if age_in_days < 30 else "✅ Established domain"
-        else:
+        if not creation_date_str:
             return f"WHOIS Data for {domain}: Could not determine creation date. Treat with caution."
-
-        # 4. Return the data to the AI agent
+            
+        # 3. Parse the API's date format safely
+        # The API returns something like "1997-09-15T04:00:00.000Z", we just want "1997-09-15"
+        clean_date_str = str(creation_date_str)[:10]
+        creation_date = datetime.strptime(clean_date_str, "%Y-%m-%d")
+        
+        # 4. Calculate Age
+        age_in_days = (datetime.now() - creation_date).days
+        age_warning = "🚨 HIGH RISK (Brand new domain!)" if age_in_days < 30 else "✅ Established domain"
+        
         return f"""
         [WHOIS Analysis for {domain}]
         Registrar: {registrar}
-        Created On: {creation_date.strftime('%Y-%m-%d')}
+        Created On: {clean_date_str}
         Age: {age_in_days} days old
         Status: {age_warning}
         """
         
     except Exception as e:
-        return f"WHOIS Lookup Failed for {domain}: {str(e)}"
+        # Now the AI will actually tell us WHY it failed if it happens again!
+        return f"WHOIS Lookup Failed for {domain}. Developer Error Details: {str(e)}"
         
 @mcp.tool()
 def scan_domain_dns(domain_or_url: str) -> str:
