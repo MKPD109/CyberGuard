@@ -1,0 +1,1 @@
+web: gunicorn cyberguard_project.wsgi

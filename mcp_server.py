@@ -7,7 +7,6 @@ import base64
 import requests
 import dns.resolver
 import urllib.parse
-import whois
 from datetime import datetime
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
@@ -109,11 +108,42 @@ def scan_domain_whois(domain: str) -> str:
         registrar = whois_data.get("registrar", "Unknown")
         creation_date_str = whois_data.get("creation_date")
         
+        # --- NEW FALLBACK LOGIC ---
+        # If the API fails to find the date (common for domains like facebook.com),
+        # fallback to the local Python 'whois' library.
+        if not creation_date_str:
+            try:
+                # Make the Python script look like a normal Google Chrome browser
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "application/rdap+json"
+                }
+                rdap_response = requests.get(f"https://rdap.org/domain/{domain}", headers=headers, timeout=10)
+                
+                if rdap_response.status_code == 200:
+                    rdap_data = rdap_response.json()
+                    
+                    # RDAP stores dates in an 'events' list, so we search for the registration event
+                    for event in rdap_data.get("events", []):
+                        if event.get("eventAction") == "registration":
+                            creation_date_str = event.get("eventDate")
+                            # Try to grab the registrar from RDAP if the first API missed it
+                            if not registrar or registrar == "Unknown":
+                                for entity in rdap_data.get("entities", []):
+                                    if "registrar" in entity.get("roles", []):
+                                        registrar = entity.get("vcardArray", [[]])[1][1][3]
+                            break
+                else:
+                    # This will print in your terminal so you can see if it's still blocking you
+                    print(f"--- RDAP Blocked! HTTP Status: {rdap_response.status_code} ---")
+            except Exception as e:
+                print(f"--- RDAP Error: {str(e)} ---")
+
+        # If it still can't find it after the fallback
         if not creation_date_str:
             return f"WHOIS Data for {domain}: Could not determine creation date. Treat with caution."
             
-        # 3. Parse the API's date format safely
-        # The API returns something like "1997-09-15T04:00:00.000Z", we just want "1997-09-15"
+        # 3. Parse the date format safely
         clean_date_str = str(creation_date_str)[:10]
         creation_date = datetime.strptime(clean_date_str, "%Y-%m-%d")
         
